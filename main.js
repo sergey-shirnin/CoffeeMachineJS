@@ -1,15 +1,36 @@
 const input = require('sync-input');
 
+let machineResources = {
+  water : 0,
+  milk : 0,
+  coffeeBeans : 0
+}
+
 const regCoffeeRecipe = {
   water : 200,
   milk : 50,
   coffeeBeans : 15
 }
 
-let userNumOfCups = input('Write how many cups of coffee you will need:\n')
+Object.keys(machineResources).forEach(k => {
+  let unitOfMeasure = (k == 'coffeeBeans') ? 'gr' : 'ml'
+  console.log(`Write how many ${unitOfMeasure} of ${k} the coffee machine has:`)
+  let entry = Number(input())
+  machineResources[k] = entry;
+});
 
-console.log(`For ${userNumOfCups} cups of coffee you will need:\n`)
-for (const [ingredient, quantity] of Object.entries(regCoffeeRecipe)) {
-  let unitOfMeasure = (ingredient == 'coffeeBeans') ? 'gr' : 'ml'
-  console.log(`${userNumOfCups * quantity} ${unitOfMeasure} of ${ingredient}`)
-}
+console.log('Write how many cups of coffee you will need:')
+let userNumOfCups = Number(input());
+
+let cupsPerResources = []
+Object.keys(machineResources).forEach(k => {
+  cupsPerResources.push(~~(machineResources[k] / regCoffeeRecipe[k]))
+});
+
+const machineNumOfCups = Math.min.apply(Math, cupsPerResources);
+
+let brewMsg = (machineNumOfCups < userNumOfCups) ? `No, I can make only ${machineNumOfCups} cups of coffee`
+  : (machineNumOfCups > userNumOfCups) ? `Yes, I can make that amount of coffee (and even ${machineNumOfCups - userNumOfCups} more than that)`
+  : "Yes, I can make that amount of coffee "
+
+console.log(brewMsg)

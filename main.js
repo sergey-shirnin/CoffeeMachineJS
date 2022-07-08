@@ -1,114 +1,103 @@
 const input = require('sync-input');
 
-startUp = true
+class Machine {
+  constructor(water, coffeeBeans, milk, disposableCups, money) {
+    this.water = water;
+    this.coffeeBeans = coffeeBeans;
+    this.milk = milk;
+    this.disposableCups = disposableCups;
+    this.money = money;
+    this.currentVariety = [...new Array(recipes.length).keys()].map(i => `${i} - ${recipes[i].id}`).slice(1).join(', ')
+  }
 
-upperRegex = /(?=[A-Z])/
-spaceRegex = /\s+/g
-oneSpace = ' '
-spacedCoffee = `${oneSpace}coffee${oneSpace}`
+  getStatus() {
+    console.log('\nThe coffee machine has:\n');
+    console.log(`${this.water} ml of water`);
+    console.log(`${this.milk} ml of milk`);
+    console.log(`${this.coffeeBeans} g of coffee beans`);
+    console.log(`${this.disposableCups} disposable cups`);
+    console.log(`$${this.money} of money\n`);
+  }
 
-function mainMenu() {
-  console.log('\nWrite action (buy, fill, take):')
-  return input();
+  updateResources(what) {
+    const mode = what.price === 0 ? -1 : 1;
+    this.water -= what.water * mode;
+    this.milk -= what.milk* mode;
+    this.coffeeBeans -= what.coffeeBeans * mode;
+    this.disposableCups -= what.disposableCups * mode;
+    this.money += what.price * mode;
+  }
+  
+  preBuyResourcesSummary(coffeeSelection) {
+    return Object.keys(coffeeMachine)
+      .filter(k => coffeeMachine[k] < coffeeSelection[k])
+      .reduce((arr, k) => ({ ...arr, [k]: coffeeSelection[k] - coffeeMachine[k]}), {});
+    }
+  
+  buyCoffee() {
+    console.log(`\nWhat do you want to buy? ${this.currentVariety}, back - to main menu:`)
+    const menuChoice = input();
+    if (menuChoice === 'back') return;
+    const toAddResourcesSummary = this.preBuyResourcesSummary(recipes[menuChoice]);
+    const lowResourcesNames = Object.keys(toAddResourcesSummary).join(', ');
+    if (lowResourcesNames) { 
+      console.log(`Sorry, not enough ${lowResourcesNames}!\n`)
+      } else { 
+      console.log('I have enough resources, making you a coffee!\n');
+      this.updateResources(recipes[menuChoice]) }
+  }
+
+  fillMachine() {
+    let refillData = new Array();
+    for (let msg of [
+      'Write how many ml of water you want to add:',
+      'Write how many ml of milk you want to add:',
+      'Write how many grams of coffee beans you want to add:',
+      'Write how many disposable coffee cups you want to add:',
+      ]) { 
+        console.log(msg);
+        refillData.push(input());
+    };
+    this.updateResources(new Product(...refillData))
+  }
+
+  withdrawMoney() {
+    console.log(`I gave you $${this.money}\n`);
+    this.money = 0;
+  }
+  
+  main(mainMenuChoice='') {
+    while (mainMenuChoice != 'exit') {
+      mainMenuChoice = input(`Write action (buy, fill, take, remaining, exit):`);
+      if (mainMenuChoice == 'buy') {
+        this.buyCoffee();
+      } else if (mainMenuChoice == 'fill') {
+        this.fillMachine();
+      } else if (mainMenuChoice == 'take') {
+        this.withdrawMoney();
+      } else if (mainMenuChoice == 'remaining') {
+        this.getStatus();
+    }
+  }
+}
 }
 
-let getStatus = () => {
-  if (!startUp) { console.log() }
-  console.log(`The coffee machine has:`);
-  Object.entries(machineResources).forEach(([k, v]) => {
-    let unitOfMeasure = 
-      (k == 'disposableCups') ? oneSpace
-      : (k == 'money') ? 'of'
-      : (k == 'coffeeBeans') ? 'gr of' 
-      : 'ml of';
-    let statusMsg = `${v} ${unitOfMeasure} ${k.split(upperRegex).join(oneSpace).toLowerCase()}`;
-    console.log(statusMsg.replace(spaceRegex, oneSpace));
-  });
-  startUp = false;
+class Product {
+  constructor(water, coffeeBeans, milk, disposableCups, price=0, id) {
+    this.water = water;
+    this.coffeeBeans = coffeeBeans;
+    this.milk = milk;
+    this.disposableCups = disposableCups
+    this.price = price;
+    this.id = id;
+  }
 }
+    
+let recipes = ['Water, Coffee, Milk, Cups',
+  new Product(250, 16, 0, 1, price=4, id='espresso'),
+  new Product(350, 20, 75, 1, price=7, id='latte'),
+  new Product(200, 12, 100, 1, price=6, id='cappuchino')
+  ]
+let coffeeMachine = new Machine(400, 120, 540, 9, 550);
 
-
-let buyCoffee = () => {
-  console.log('What do you want to buy? 1 - espresso, 2 - latte, 3 - cappuccino:')
-  let ind = Number(input()) - 1;
-  Object.entries(coffeeSelection[ind]).forEach(([ingredient, amount]) => {
-  machineResources[ingredient] -= amount;
-});
-  getStatus();
-}
-
-let fillMachine = () => {
-  for (k of Object.keys(machineResources)) {
-    if (k == 'money') break;
-    let unitOfMeasure = 
-      (k == 'disposableCups') ? oneSpace
-      : (k == 'money') ? 'of'
-      : (k == 'coffeeBeans') ? 'grams of' 
-      : 'ml of';
-    let displayResource = 
-      (k == 'disposableCups') ? k.split(upperRegex).join(spacedCoffee)
-      : k.split(upperRegex).join(oneSpace)
-    let fillMsg = `Write how many ${unitOfMeasure} ${displayResource.toLowerCase()} you want to add:`.replace(spaceRegex, oneSpace)
-    console.log(fillMsg);
-    machineResources[k] += Number(input());
-  };
-  getStatus();                                         
-}
-
-let withdrawMoney = () => {
-  console.log(`I gave you $${machineResources.money}`);
-  machineResources.money = 0;
-  getStatus();
-}
-
-const main = () => {
-  getStatus()
-  let mainMenuChoice = mainMenu();
-  if (mainMenuChoice == 'buy') {
-    buyCoffee();
-  } else if (mainMenuChoice == 'fill') {
-    fillMachine();
-  } else if (mainMenuChoice == 'take') {
-    withdrawMoney();
-  } else { console.log('unknown error')};
-}
-
-// editable scope
-
-let machineResources = {
-  water : 400,
-  milk : 540,
-  coffeeBeans : 120,
-  disposableCups : 9,
-  money : 550
-}
-
-const coffeeSelection = [
-  // espresso
-  {
-    water : 250,
-    coffeeBeans : 16,
-    disposableCups : 1,
-    money : -4
-  },
-  // latte
-  {
-    water : 350,
-    milk : 75,
-    coffeeBeans : 20,
-    disposableCups : 1,
-    money : -7
-  },
-  // cappuccino
-  {
-    water : 200,
-    milk : 100,
-    coffeeBeans : 12,
-    disposableCups : 1,
-    money : -6
-  },
-]
-
-//*exec/
-main()
-                                                      
+coffeeMachine.main();
